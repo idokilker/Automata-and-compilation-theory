@@ -1,0 +1,267 @@
+PARSER_BEGIN(CLang)
+public class CLang {
+    
+}
+PARSER_END(CLang)
+
+SKIP : {
+ " "
+|  "\t"
+|  "\n"
+|  "\r"
+|  <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+|  <"/*" (~["*"])* "*" ("*" | ~["*","/"] (~["*"])* "*")* "/">
+}
+
+TOKEN : {
+    <TYPE: <INT> | <CHAR>  >            |
+    <VOID: "void" >                     |
+    <IF:   "if"  >                      |
+    <#INT: "int" >                      |
+    <#CHAR: "char" >                    |
+    <RETURN: "return" >                 |
+    <WHILE: "while" >                   |
+    <FOR: "for" >                                       
+}
+
+TOKEN: {
+    <ID: <LETTER> (<LETTER> | <DIGIT> | <ZERO>)* >                  |
+    <NUMBER: <DIGIT> (<DIGIT> | <ZERO>)* | <ZERO> >                          |
+    <CHAR_VALUE: <APSOTREPHE> (<LETTER> | <DIGIT>) <APSOTREPHE> >   | 
+    <#LETTER: ["a"-"z","A"-"Z"] >                                   |
+    <#DIGIT: ["1"-"9"] >                                            |
+    <#ZERO: "0" >
+}
+
+TOKEN: {
+    <LRBRACKET: "(" > |
+    <RRBRACKET: ")" > |
+    <COMMA:     "," > |
+    <LCBRACKET: "{" > |
+    <RCBRACKET: "}" > |
+    <SEMICOLON: ";" > |
+    <ASSIGN:    "=" > |
+    <APSOTREPHE:"'" > |
+    <EQ:       "==" > |
+    <LT:       "<"  > |
+    <LTE:      "<=" > |
+    <GT:       ">"  > |
+    <GTE:      ">=" > |
+    <NOT:      "!"  > |
+    <NEQ:      "!=" > |
+    <AND:      "&&" > |
+    <OR:       "||" > |
+    <ADD:       "+" > |
+    <SUB:       "-" > |
+    <MUL:       "*" > |
+    <DIV:       "/" > |
+    <MOD:       "%" >  
+}
+
+void Start() : {}
+{
+    (sourceCodeDef())*
+}
+
+void sourceCodeDef() : {}
+{   
+    LOOKAHEAD( varDefineDef() <SEMICOLON> ) varDefineDef() <SEMICOLON> | functionDef()
+}
+
+void paramListDef() : {}
+{
+    paramDef() (<COMMA> paramDef())*
+}
+
+void paramDef() : {}
+{
+    <TYPE> <ID>
+}
+
+
+void functionDef() : {}
+{
+    <TYPE> <ID> <LRBRACKET> [paramListDef()] <RRBRACKET> funcBlockdef() |
+   VoidfunctionDef()
+}
+
+void VoidfunctionDef() : {}
+{
+    
+    <VOID> <ID> <LRBRACKET> [paramListDef()] <RRBRACKET> VoidStatementBlockDef()
+}
+
+void funcBlockdef() : {}
+{
+     <LCBRACKET> (StatementDef() )* <RETURN> [ return_val() ] <SEMICOLON>  <RCBRACKET>
+}
+
+void return_val() :{}
+{
+    LOOKAHEAD(<ID> <ASSIGN> ) assignExpressionDef() |
+    unaryExpressionDef() 
+}
+
+
+
+void varAssignDefInInit() : {}
+{
+    <ASSIGN> expressionDef()
+}
+
+
+void varDefineDef() : {}
+{
+    <TYPE> <ID> [varAssignDefInInit()]
+}
+
+
+void StatementBlockDef() : {}
+{
+    <LCBRACKET> (StatementDef())* [ <RETURN> [ return_val() ] <SEMICOLON> ]  <RCBRACKET>
+}
+void VoidStatementBlockDef() : {}
+{
+    <LCBRACKET> (VoidStatementDef() )* <RCBRACKET>
+}
+void StatementDef() : {}
+{
+
+    varDefineDef() <SEMICOLON>                |
+    expressionDef() <SEMICOLON>               |
+    IfStatementDef()                          |
+    ForStatementDef()                         |
+    WhileStatementDef()
+}
+void VoidStatementDef() : {}
+{
+    <RETURN> <SEMICOLON>                      |
+    varDefineDef() <SEMICOLON>                |
+    expressionDef() <SEMICOLON>               |
+    VoidIfStatementDef()                      |
+    VoidForStatementDef()                     |
+    VoidWhileStatementDef()
+}
+
+void IfStatementDef() : {}
+{
+    <IF> <LRBRACKET> expressionDef() <RRBRACKET> (StatementBlockDef() | StatementDef())
+}
+void VoidIfStatementDef() : {}
+{
+    <IF> <LRBRACKET> expressionDef() <RRBRACKET> (VoidStatementBlockDef() | VoidStatementDef())
+}
+
+void expressionDef() : {}
+{
+    LOOKAHEAD(assignExpressionDef()) assignExpressionDef() |
+    boolExpressionDef()
+}
+
+void assignExpressionDef() : {}
+{
+    <ID> <ASSIGN> expressionDef()
+}
+
+void boolExpressionDef() : {}
+{
+    binaryBoolExpressionOrDef()
+}
+
+void binaryBoolExpressionOrDef() : {}
+{
+    binaryBoolExpressionAndDef() [ <OR> binaryBoolExpressionOrDef() ]
+}
+
+void binaryBoolExpressionAndDef() : {}
+{
+    binaryExpressionEqDef() [ <AND> binaryBoolExpressionAndDef() ]
+}
+
+void binaryExpressionEqDef() : {}
+{
+    binaryBoolExpressionCompareDef() [ (<EQ> | <NEQ> ) binaryExpressionEqDef() ] 
+}
+
+
+
+void binaryBoolExpressionCompareDef() : {}
+{
+    addExpressionDef() [ (<LT> | <LTE> | <GT> | <GTE>) binaryBoolExpressionCompareDef() ]
+}
+
+void addExpressionDef() : {}
+{
+    mulExpressionDef() [ (<ADD> | <SUB>) addExpressionDef() ]
+}
+
+void mulExpressionDef() : {}
+{
+    unaryExpressionDef() [ (<MUL> | <DIV> | <MOD>) mulExpressionDef() ]
+}
+
+void unaryExpressionDef() : {}
+{
+    LOOKAHEAD(2) funcCall()                     |
+    <NOT> unaryExpressionDef()                  |
+    <LRBRACKET> expressionDef() <RRBRACKET>     |
+    [<SUB>] constExpressionDef()
+
+}
+
+void funcCall() : {}
+{
+    <ID> <LRBRACKET> [ paramListFuncCall() ] <RRBRACKET>
+}
+
+void paramListFuncCall() : {}
+{
+    funcExpressionDef()  (<COMMA> funcExpressionDef())*
+}
+
+void funcExpressionDef() : {}
+{
+    expressionDef()
+}
+
+void constExpressionDef() : {}
+{
+    <ID>                                        |
+    <NUMBER>                                    |
+    <CHAR_VALUE>                                
+}
+
+void WhileStatementDef() : {}
+{
+    <WHILE> <LRBRACKET> expressionDef() <RRBRACKET> (StatementBlockDef() | StatementDef())
+}
+
+void ForStatementDef() : {}
+{
+    <FOR> <LRBRACKET>  [firstForInit() ]  <SEMICOLON> [condition()] <SEMICOLON> [endForInit() ]  <RRBRACKET> (StatementBlockDef() | StatementDef())
+}
+
+void VoidWhileStatementDef() : {}
+{
+    <WHILE> <LRBRACKET> expressionDef() <RRBRACKET> (VoidStatementBlockDef() | VoidStatementDef())
+}
+
+void VoidForStatementDef() : {}
+{
+    <FOR> <LRBRACKET> [firstForInit() ]  <SEMICOLON> [condition()] <SEMICOLON> [endForInit() ] <RRBRACKET> (VoidStatementBlockDef() | VoidStatementDef())
+}
+
+void condition() : {}
+{
+    expressionDef()
+}
+
+void firstForInit() : {}
+{
+ ( varDefineDef() | assignExpressionDef() ) ( <COMMA> ( assignExpressionDef() | varDefineDef() ) )*
+}
+
+void endForInit() : {}
+{
+    expressionDef() (<COMMA> expressionDef() )*
+}
